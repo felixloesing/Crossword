@@ -1,9 +1,9 @@
 
-class Coord {
+class Position {
 	public int y;
 	public int x;
 	
-	public Coord(int x, int y){
+	public Position(int x, int y){
 		this.y = y;
 		this.x = x;
 	}

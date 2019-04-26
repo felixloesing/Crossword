@@ -18,7 +18,6 @@ public class Client extends Thread {
 			try {
 				s = new Socket(hostname, port);
 			} catch (Exception uhe) {
-				// TODO Auto-generated catch block
 				//uhe.printStackTrace();
 				while(s == null) {
 					System.out.println("Connection failed.");
@@ -29,7 +28,6 @@ public class Client extends Thread {
 					try {
 						s = new Socket(hostname, port);
 					} catch (Exception e) {
-						// TODO Auto-generated catch block
 						//e.printStackTrace();
 					}
 				}
