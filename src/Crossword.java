@@ -333,11 +333,11 @@ public class Crossword {
 				if(board[i][j] == '^'){
 					System.out.print("  ");
 				}
-				else if((int)board[i][j] < 65 && (int)board[i][j]>9){
-					System.out.print((int) board[i][j]);
-				}
-				else if((int)board[i][j] < 65 && (int)board[i][j]>0){
+				else if((int)board[i][j]>0 && (int)board[i][j] < 65){
 					System.out.print(" " + (int) board[i][j]);
+				}
+				else if((int)board[i][j]>9 && (int)board[i][j] < 65){
+					System.out.print((int) board[i][j]);
 				}
 				else{
 					System.out.print(board[i][j] + " ");
@@ -354,10 +354,10 @@ public class Crossword {
 				for(int i=0; i<board.length; i++){
 					if(board[i][j] == '^'){
 						line += "  ";
-					} else if ((int)board[i][j] < 65 && (int)board[i][j]>9){
-						line += (int) board[i][j];
 					} else if ((int)board[i][j] < 65 && (int)board[i][j]>0){
 						line += " " + (int) board[i][j];
+					} else if ((int)board[i][j] < 65 && (int)board[i][j]>9){
+							line += (int) board[i][j];
 					} else {
 						line += board[i][j] + " ";
 					}
@@ -371,70 +371,74 @@ public class Crossword {
 	}
 
 	public char[][] resizeBoard(ArrayList<HorizontalW>HwordFinal, ArrayList<VerticalW>VwordFinal){
-		int hlen = 0;
-		int vlen = 0;
+		int lenh = 0;
 		int shiftl = 100;
 		int shiftup = 100;
-
-		//clean up the whitespace in board
-		for(HorizontalW hw : HwordFinal){
-			if(hw.x < shiftl){
-				shiftl = hw.x;
-			}
-		}
+		int lenv = 0;
+		
 		for(VerticalW vw : VwordFinal){
 			if(vw.y < shiftup){
 				shiftup = vw.y;
 			}
 		}
-		//adjust the word indices according to the shift amount
+
 		for(HorizontalW hw : HwordFinal){
-			hw.x = hw.x-shiftl+1; //leave space for number so +1
-			hw.y = hw.y-shiftup+1;
-			if(hw.x + hw.len > hlen){
-				hlen = hw.x +hw.len;
+			if(hw.x < shiftl){
+				shiftl = hw.x;
 			}
 		}
+		
 		for(VerticalW vw : VwordFinal){
 			vw.x = vw.x-shiftl+1;
 			vw.y = vw.y-shiftup+1;
-			if(vw.y + vw.len > vlen){
-				vlen = vw.y + vw.len;
+			if(vw.y + vw.len > lenv){
+				lenv = vw.y + vw.len;
 			}
 		}
-		char[][] resizedBoard = new char[hlen][vlen];
-		for(int i=0; i<hlen; i++){
-			for(int j=0; j<vlen; j++){
-				resizedBoard[i][j] = '^';
-			}
-		}
+		
 		for(HorizontalW hw : HwordFinal){
-			if(resizedBoard[hw.x-1][hw.y] == '^'){
-				resizedBoard[hw.x-1][hw.y] = (char)hw.num;
-			}
-			for(int i=0; i<hw.len; i++){
-				resizedBoard[hw.x+i][hw.y] = '_';
-				//resizedBoard[hw.x+i][hw.y] = hw.word.charAt(i);// answ
+			hw.x = hw.x-shiftl+1; 
+			hw.y = hw.y-shiftup+1;
+			if(hw.x + hw.len > lenh){
+				lenh = hw.x +hw.len;
 			}
 		}
+		
+		char[][] newBoard = new char[lenh][lenv];
+		
+		for(int i=0; i<lenh; i++){
+			for(int j=0; j<lenv; j++){
+				newBoard[i][j] = '^';
+			}
+		}
+		
 		for(VerticalW v : VwordFinal){
 			if(!v.isPair){
 
-				if(resizedBoard[v.x-1][v.y] == '^'){
-					resizedBoard[v.x-1][v.y] = (char) v.num;
+				if(newBoard[v.x-1][v.y] == '^'){
+					newBoard[v.x-1][v.y] = (char) v.num;
 				}
-				else if(resizedBoard[v.x][v.y-1] == '^'){
-					resizedBoard[v.x][v.y-1] = (char) v.num;
+				else if(newBoard[v.x][v.y-1] == '^'){
+					newBoard[v.x][v.y-1] = (char) v.num;
 				}
 
 			}
 
 			for(int i=0; i<v.len; i++){
-				resizedBoard[v.x][v.y+i] = '_';
-				//resizedBoard[v.x][v.y+i] = v.word.charAt(i);// answ
+				newBoard[v.x][v.y+i] = '_';
 			}
 		}
-		return resizedBoard;
+		
+		for(HorizontalW hw : HwordFinal){
+			if(newBoard[hw.x-1][hw.y] == '^'){
+				newBoard[hw.x-1][hw.y] = (char)hw.num;
+			}
+			for(int i=0; i<hw.len; i++){
+				newBoard[hw.x+i][hw.y] = '_';
+			}
+		}
+		
+		return newBoard;
 	}
 
 }
