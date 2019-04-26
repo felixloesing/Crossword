@@ -1,10 +1,11 @@
 
 class VerticalW {
-	public boolean hasPair;
-	public HorizontalW hword;
-	public int num;
+	
 	public int x;		
 	public int y;
+	public boolean isPair;
+	public HorizontalW hword;
+	public int num;
 	public int len;
 	public String word;
 	public String question;
@@ -14,13 +15,13 @@ class VerticalW {
 		this.word = word;
 		this.num = num;
 		this.len = len;
-		hasPair = false;
 		this.question = question;
+		
+		isPair = false;
 	}
 	
 	public void setPair(HorizontalW hw){
-		
 		this.hword = hw;
-		hasPair = true;
+		isPair = true;
 	}
 }

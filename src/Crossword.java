@@ -4,34 +4,34 @@ import java.io.*;
 import java.util.Scanner;
 
 public class Crossword {
-	
+
 	public ObjectFile readInFile(ArrayList<HorizontalW>horiWords, ArrayList<VerticalW>vertWords, File file){
 		String s = "";
-		Scanner scannerIn = null;
+		Scanner scanner = null;
+
 		int height = 0;
 		int width = 0;
-		
-		try {
-			scannerIn = new Scanner(file);
 
-			String line;
-			String lineformat[];
+		try {
+			scanner = new Scanner(file);
+
 			Boolean down = false;
 			Boolean across = false;
-			while (scannerIn.hasNextLine()){
-				line = scannerIn.nextLine();
-				s += line + "\n";
+			while (scanner.hasNextLine()){
+				String line = scanner.nextLine();
+				s += line;
+				s +=  "\n";
+
 				
-				if(line.equals("ACROSS")){
+				if(line.equals("DOWN")){
+					across = false;
+					down = true;
+				} else if(line.equals("ACROSS")){
 					across = true;
 					down = false;
 				}
-				else if(line.equals("DOWN")){
-					across = false;
-					down = true;
-				}
 				else {
-					lineformat = line.split("\\|", 4);
+					String lineformat[] = line.split("\\|", 4);
 					if(across){
 						horiWords.add(new HorizontalW(Integer.parseInt(lineformat[0]), lineformat[1].length(), lineformat[1].toUpperCase(), lineformat[2]));
 						width += lineformat[1].length();
@@ -44,33 +44,32 @@ public class Crossword {
 			}	
 		} catch(FileNotFoundException f){
 			f.printStackTrace();
+		} finally {
+			scanner.close();
 		}
-		
+
 		for(HorizontalW hword: horiWords){
-			for(VerticalW vword: vertWords){
-				if(hword.num == vword.num){//set pairs
-					hword.setPair(vword);
+			for(VerticalW vword: vertWords) {
+				if(vword.num == hword.num) {
 					vword.setPair(hword);
+					hword.setPair(vword);
 					break;
 				}
 			}
 		}
-		int [] ls = new int[2];
-		ls[0] = 2*(width+horiWords.get(0).len);
-		ls[1] = 2*(height+vertWords.get(0).len);
-		return new ObjectFile(ls[0], ls[1], s);
+		return new ObjectFile(2*(width+horiWords.get(0).len), 2*(height+vertWords.get(0).len), s);
 	}
-	
+
 	public char[][] startGame(ArrayList<HorizontalW> hor, ArrayList<VerticalW> vert, char[][] boardst, File f){
 		ArrayList<HorizontalW>hori = new ArrayList<HorizontalW>();
 		ArrayList<VerticalW>verti = new ArrayList<VerticalW>();
-		
+
 		ObjectFile fileobject = readInFile(hori, verti, f);
 		int width = fileobject.x;
 		int height = fileobject.y;
-		
+
 		char[][] board = new char[width][height];
-		
+
 		//initialize board
 		for(int i = 0; i < width; i++){
 			for(int j = 0; j < height; j++){
@@ -82,15 +81,15 @@ public class Crossword {
 		ArrayList<Coord>hcoords = new ArrayList<Coord>();
 		ArrayList<HorizontalW>HwordFinal = new ArrayList<HorizontalW>();
 		ArrayList<VerticalW>VwordFinal = new ArrayList<VerticalW>();
-		
+
 		vcoords = placeWord(0,(int)width/2,(int)height/2, hori.get(0), board);
-		
+
 		//hori.get(0).setXY((int)width/2, (int)height/2);
 		hori.get(0).x = (int)width/2;
 		hori.get(0).y = (int)height/2;
 		HwordFinal.add(hori.get(0));
-		
-		if(hori.get(0).hasPair){
+
+		if(hori.get(0).isPair){
 			hcoords = placeWord(0,(int)width/2,(int)height/2, hori.get(0).vertWord, board);
 			//hwords.get(0).vword.setXY((int)width/2, (int)height/2);
 			hori.get(0).vertWord.x = (int)width/2;
@@ -98,7 +97,7 @@ public class Crossword {
 			VwordFinal.add(hori.get(0).vertWord);
 			verti.remove(hori.get(0).vertWord);
 		}
-		
+
 		//also remove word from hwords
 		hori.remove(0);
 		solve(hori, hcoords, verti, vcoords, board);
@@ -153,7 +152,7 @@ public class Crossword {
 		return true;
 	}
 
-	public ArrayList<Coord> placeWord(int start, int horz, int vert, HorizontalW hword, char[][] board){ //startingindex (i,j) on
+	public ArrayList<Coord> placeWord(int start, int horz, int vert, HorizontalW hword, char[][] board) {
 		ArrayList<Coord> coords = new ArrayList<Coord>();
 		String word = hword.word;
 		for(int i=0; i<hword.len; i++){
@@ -169,17 +168,17 @@ public class Crossword {
 	}
 
 	public ArrayList<Coord> placeWord(int start, int horz, int vert, VerticalW vword, char[][] board) {
-		
+
 		ArrayList<Coord> coords = new ArrayList<Coord>();
 		String word = vword.word;
-		
+
 		for(int j=0; j<vword.len; j++) {
-			
+
 			if(board[horz][j+vert-start] == ' '){
 				int y = j+vert-start;
 				char c = word.charAt(j);
 				int x = horz;
-				
+
 				board[x][y] = c;
 				coords.add(new Coord(x,y));
 			}
@@ -187,13 +186,13 @@ public class Crossword {
 		return coords;
 	}
 
-	
+
 	public void removeWord(ArrayList<Coord>placedCoords, char[][] board){
 		for (Coord coord : placedCoords) {
 			board[coord.x][coord.y] = ' ';
 		}
 	}
-	
+
 	public void placeAnswerHorizontal(HorizontalW hw, char [][] board) {
 		try {
 			int p = 0;
@@ -205,7 +204,7 @@ public class Crossword {
 			e.printStackTrace();
 		}
 	}
-	
+
 	public void placeAnswerVertical(VerticalW vw, char [][] board) {
 		try {
 			int p = 0;
@@ -233,7 +232,7 @@ public class Crossword {
 					ArrayList<Coord> placedIndices2 = new ArrayList<Coord>();
 					if(isLegal(i, index.x, index.y, hword, board)){
 						//hword.setXY(index.x-i,index.y);
-						
+
 						hword.x = index.x-i;
 						hword.y = index.y;
 						//get slice of hwords, all but current
@@ -246,8 +245,8 @@ public class Crossword {
 						ArrayList<Coord>nextvcoords = new ArrayList<Coord>();
 						placedIndices = placeWord(i, index.x, index.y, hword, board); //place chars on board
 						nextvcoords.addAll(vcoords);
-				        nextvcoords.addAll(placedIndices);
-						if(!hword.hasPair){ //if word does not have pair
+						nextvcoords.addAll(placedIndices);
+						if(!hword.isPair){ //if word does not have pair
 							kill = solve(nexthwords, hcoords, vwords, nextvcoords, board);		//next step of recursion
 							if(kill == true) return true;
 							removeWord(placedIndices, board);						//remove chars from board
@@ -259,15 +258,15 @@ public class Crossword {
 							placedIndices2 = placeWord(0, index.x-i, index.y, vword, board); //place chars on board
 							//update hcoords with new vword placement
 							nexthcoords.addAll(hcoords);
-					        nexthcoords.addAll(placedIndices2);
-					        int vindex = vwords.indexOf(vword);
+							nexthcoords.addAll(placedIndices2);
+							int vindex = vwords.indexOf(vword);
 							ArrayList<VerticalW> nextvwords = new ArrayList<VerticalW>(vwords.subList(0, vindex));
 							if(vindex+1<vwords.size()){
 								nextvwords.addAll(vwords.subList(vindex+1, vwords.size()));
 							}
-					        kill = solve(nexthwords, nexthcoords, nextvwords, nextvcoords,board);
+							kill = solve(nexthwords, nexthcoords, nextvwords, nextvcoords,board);
 							if(kill == true) return true;
-					        removeWord(placedIndices, board);						//remove chars from board
+							removeWord(placedIndices, board);						//remove chars from board
 							removeWord(placedIndices2, board);						//remove chars from board
 						}
 					}
@@ -294,8 +293,8 @@ public class Crossword {
 						placedIndices = placeWord(i, index.x, index.y, vword, board); //place chars on board
 						//update hcoords with new vword placement
 						nexthcoords.addAll(hcoords);
-				        nexthcoords.addAll(placedIndices);    
-						if(!vword.hasPair){
+						nexthcoords.addAll(placedIndices);    
+						if(!vword.isPair){
 							kill = solve(hwords, nexthcoords, nextvwords, vcoords, board);		//next step of recursion
 							if(kill == true) return true;
 							removeWord(placedIndices, board);						//remove chars from board
@@ -307,15 +306,15 @@ public class Crossword {
 							placedIndices2 = placeWord(0, index.x, index.y-i, hword, board); //place chars on board
 							//update hcoords with new vword placement
 							nextvcoords.addAll(vcoords);
-					        nextvcoords.addAll(placedIndices2);
-					        int hindex = hwords.indexOf(hword);
-					        ArrayList<HorizontalW> nexthwords = new ArrayList<HorizontalW>(hwords.subList(0, hindex));
+							nextvcoords.addAll(placedIndices2);
+							int hindex = hwords.indexOf(hword);
+							ArrayList<HorizontalW> nexthwords = new ArrayList<HorizontalW>(hwords.subList(0, hindex));
 							if(hindex+1<hwords.size()){
 								nexthwords.addAll(hwords.subList(hindex+1, hwords.size()));
 							}
-					        kill = solve(nexthwords, nexthcoords, nextvwords, nextvcoords, board);		//next step of recursion
+							kill = solve(nexthwords, nexthcoords, nextvwords, nextvcoords, board);		//next step of recursion
 							if(kill == true) return true;
-					        removeWord(placedIndices, board);						//remove chars from board
+							removeWord(placedIndices, board);						//remove chars from board
 							removeWord(placedIndices2, board);						//remove chars from board
 						}
 					}
@@ -344,7 +343,7 @@ public class Crossword {
 			System.out.println();
 		}
 	}
-	
+
 	public void sendBoard(Player p, char [][] board){
 		try {
 			for(int j=0; j<board[0].length; j++){
@@ -367,13 +366,13 @@ public class Crossword {
 			System.out.println("error sending board");
 		}
 	}
-	
+
 	public char[][] resizeBoard(ArrayList<HorizontalW>HwordFinal, ArrayList<VerticalW>VwordFinal){
 		int hlen = 0;
 		int vlen = 0;
 		int shiftl = 100;
 		int shiftup = 100;
-		
+
 		//clean up the whitespace in board
 		for(HorizontalW hw : HwordFinal){
 			if(hw.x < shiftl){
@@ -416,17 +415,17 @@ public class Crossword {
 			}
 		}
 		for(VerticalW v : VwordFinal){
-			if(!v.hasPair){
-				
+			if(!v.isPair){
+
 				if(resizedBoard[v.x-1][v.y] == '^'){
 					resizedBoard[v.x-1][v.y] = (char) v.num;
 				}
 				else if(resizedBoard[v.x][v.y-1] == '^'){
 					resizedBoard[v.x][v.y-1] = (char) v.num;
 				}
-				
+
 			}
-			
+
 			for(int i=0; i<v.len; i++){
 				resizedBoard[v.x][v.y+i] = '_';
 				//resizedBoard[v.x][v.y+i] = v.word.charAt(i);// answ
@@ -434,6 +433,6 @@ public class Crossword {
 		}
 		return resizedBoard;
 	}
-	
+
 }
 
