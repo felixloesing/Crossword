@@ -257,7 +257,7 @@ public class Server {
 										
 										ansW = hw;
 										//System.out.println(ansW.word);
-										c.placeAnswerHorizontal(ansW, board);
+										c.placeHorizontal(ansW, board);
 										hwords.remove(ansW);
 										break;
 									}
@@ -294,7 +294,7 @@ public class Server {
 								for (VerticalW vw : vwords) {
 									if (question.answer.toLowerCase().equals(vw.word.toLowerCase())) {
 										ansW = vw;
-										c.placeAnswerVertical(ansW, board);
+										c.placeVertical(ansW, board);
 										vwords.remove(ansW);
 										break;
 									}
