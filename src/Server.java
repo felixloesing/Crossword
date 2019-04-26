@@ -338,7 +338,16 @@ public class Server {
 						sendToEveryone("Player " + player.playerNumber + " - " + player.score + " correct answers. ");
 					}
 					sendToEveryone("");
-					sendToEveryone("Player " + players.firstElement().playerNumber + " is the winner. ");
+					if (players.size() > 1) {
+						if (players.get(0).score == players.get(1).score) {
+							sendToEveryone("Tie between " + players.firstElement().playerNumber + " and " + players.get(1).playerNumber);
+						} else {
+							sendToEveryone("Player " + players.firstElement().playerNumber + " is the winner. ");
+						}
+					} else {
+						sendToEveryone("Player " + players.firstElement().playerNumber + " is the winner. ");
+					}
+					
 					Message endMessage = new Message("", false);
 					endMessage.endGame = true;
 					for (Player player : players) {
