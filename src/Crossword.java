@@ -59,6 +59,48 @@ public class Crossword {
 		}
 		return new ObjectFile(2*(width+horiWords.get(0).len), 2*(height+vertWords.get(0).len), s);
 	}
+	
+	public boolean allowedPlacementH(int start, int horz, int vert, HorizontalW hword, char[][] board){ //HORZ
+		String word = hword.word;
+		if(board[horz-start-1][vert] != ' '){
+			return false;
+		}
+		if(board[horz-start+hword.len][vert] != ' '){
+			return false;
+		}
+		for(int i=0; i<hword.len; i++){
+			if(board[i+horz-start][vert+1] != ' ' || board[i+horz-start][vert-1] != ' '){
+				if(horz-start+i != horz){
+					return false;
+				}
+			}
+			if(board[i+horz-start][vert] != ' ' && board[i+horz-start][vert] != word.charAt(i)){ //start represents # chars before to begin placing
+				return false;
+			}
+		}
+		return true;
+	}
+
+	public boolean allowedPlacementV(int start, int horz, int vert, VerticalW vword, char[][] board){ //VERT
+		String word = vword.word;
+		if(board[horz][vert-start-1] != ' '){
+			return false;
+		}
+		if(board[horz][vert-start+vword.len] != ' '){
+			return false;
+		}
+		for(int j=0; j<vword.len; j++){
+			if(board[horz-1][j+vert-start] != ' ' || board[horz+1][j+vert-start] != ' '){
+				if(vert-start+j != vert){
+					return false;
+				}
+			}
+			if(board[horz][j+vert-start] != ' ' && board[horz][j+vert-start] != word.charAt(j)){ //start represents # chars before to begin placing
+				return false;
+			}
+		}
+		return true;
+	}
 
 	public char[][] startGame(ArrayList<HorizontalW> hor, ArrayList<VerticalW> vert, char[][] boardst, File f){
 		ArrayList<HorizontalW>hori = new ArrayList<HorizontalW>();
@@ -82,7 +124,7 @@ public class Crossword {
 			}
 		}
 
-		coordV = placeWord(0,(int)width/2,(int)height/2, hori.get(0), board);
+		coordV = addWordH(0,(int)width/2,(int)height/2, hori.get(0), board);
 
 		
 		hori.get(0).x = (int)width/2;
@@ -91,14 +133,13 @@ public class Crossword {
 
 		//Determine if pair
 		if (hori.get(0).isPair) {
-			coordH = placeWord(0,(int)width/2,(int)height/2, hori.get(0).vertWord, board);
+			coordH = addWordV(0,(int)width/2,(int)height/2, hori.get(0).vertWord, board);
 			hori.get(0).vertWord.y = (int)height/2;
 			hori.get(0).vertWord.x = (int)width/2;
 			vertWPlaced.add(hori.get(0).vertWord);
 			verti.remove(hori.get(0).vertWord);
 		}
 
-		//also remove word from hwords
 		hori.remove(0);
 		
 		solve(hori, coordH, verti, coordV, board);
@@ -113,54 +154,11 @@ public class Crossword {
 		return resizedBoard;
 	}
 
-	public boolean isLegal(int start, int horz, int vert, HorizontalW hword, char[][] board){ //HORZ
-		String word = hword.word;
-		if(board[horz-start-1][vert] != ' '){
-			return false;
-		}
-		if(board[horz-start+hword.len][vert] != ' '){
-			return false;
-		}
-		for(int i=0; i<hword.len; i++){
-			if(board[i+horz-start][vert+1] != ' ' || board[i+horz-start][vert-1] != ' '){
-				if(horz-start+i != horz){
-					return false;
-				}
-			}
-			if(board[i+horz-start][vert] != ' ' && board[i+horz-start][vert] != word.charAt(i)){ //start represents # chars before to begin placing
-				return false;
-			}
-		}
-		return true;
-	}
-
-	public boolean isLegal(int start, int horz, int vert, VerticalW vword, char[][] board){ //VERT
-		String word = vword.word;
-		if(board[horz][vert-start-1] != ' '){
-			return false;
-		}
-		if(board[horz][vert-start+vword.len] != ' '){
-			return false;
-		}
-		for(int j=0; j<vword.len; j++){
-			if(board[horz-1][j+vert-start] != ' ' || board[horz+1][j+vert-start] != ' '){
-				if(vert-start+j != vert){
-					return false;
-				}
-			}
-			if(board[horz][j+vert-start] != ' ' && board[horz][j+vert-start] != word.charAt(j)){ //start represents # chars before to begin placing
-				return false;
-			}
-		}
-		return true;
-	}
-
-	public ArrayList<Position> placeWord(int start, int horz, int vert, HorizontalW hword, char[][] board) {
+	public ArrayList<Position> addWordH(int start, int horz, int vert, HorizontalW hword, char[][] board) {
 		ArrayList<Position> coords = new ArrayList<Position>();
-		String word = hword.word;
 		for(int i=0; i<hword.len; i++){
 			if(board[i+horz-start][vert] == ' '){
-				char c = word.charAt(i);
+				char c = hword.word.charAt(i);
 				int x = i+horz-start;
 				int y = vert;
 				board[x][y] = c;
@@ -170,16 +168,16 @@ public class Crossword {
 		return coords;
 	}
 
-	public ArrayList<Position> placeWord(int start, int horz, int vert, VerticalW vword, char[][] board) {
+	public ArrayList<Position> addWordV(int start, int horz, int vert, VerticalW vword, char[][] board) {
 
 		ArrayList<Position> coords = new ArrayList<Position>();
-		String word = vword.word;
+		//String word = vword.word;
 
 		for(int j=0; j<vword.len; j++) {
 
 			if(board[horz][j+vert-start] == ' '){
 				int y = j+vert-start;
-				char c = word.charAt(j);
+				char c = vword.word.charAt(j);
 				int x = horz;
 
 				board[x][y] = c;
@@ -233,7 +231,7 @@ public class Crossword {
 				for(int i=0; i<hword.len; i++){
 					ArrayList<Position>placedIndices = new ArrayList<Position>();
 					ArrayList<Position> placedIndices2 = new ArrayList<Position>();
-					if(isLegal(i, index.x, index.y, hword, board)){
+					if(allowedPlacementH(i, index.x, index.y, hword, board)){
 						//hword.setXY(index.x-i,index.y);
 
 						hword.x = index.x-i;
@@ -246,7 +244,7 @@ public class Crossword {
 						}
 						//update vcoords
 						ArrayList<Position>nextvcoords = new ArrayList<Position>();
-						placedIndices = placeWord(i, index.x, index.y, hword, board); //place chars on board
+						placedIndices = addWordH(i, index.x, index.y, hword, board); //place chars on board
 						nextvcoords.addAll(vcoords);
 						nextvcoords.addAll(placedIndices);
 						if(!hword.isPair){ //if word does not have pair
@@ -254,11 +252,11 @@ public class Crossword {
 							if(kill == true) return true;
 							removeWord(placedIndices, board);						//remove chars from board
 						}		
-						else if(isLegal(0, index.x-i, index.y,hword.vertWord, board)){//PLACE CORRESPONDING VWORD as well
+						else if(allowedPlacementV(0, index.x-i, index.y,hword.vertWord, board)){//PLACE CORRESPONDING VWORD as well
 							VerticalW vword = hword.vertWord;
 							ArrayList<Position>nexthcoords = new ArrayList<Position>();
 							//place vword pair at(x-i,y) starting w/ first index of vert word
-							placedIndices2 = placeWord(0, index.x-i, index.y, vword, board); //place chars on board
+							placedIndices2 = addWordV(0, index.x-i, index.y, vword, board); //place chars on board
 							//update hcoords with new vword placement
 							nexthcoords.addAll(hcoords);
 							nexthcoords.addAll(placedIndices2);
@@ -282,7 +280,7 @@ public class Crossword {
 				for(int i=0; i<vword.len; i++){
 					ArrayList<Position>placedIndices = new ArrayList<Position>();
 					ArrayList<Position> placedIndices2 = new ArrayList<Position>();
-					if(isLegal(i, index.x, index.y, vword, board)){
+					if(allowedPlacementV(i, index.x, index.y, vword, board)){
 						//vword.setXY(index.x, index.y-i);
 						vword.x = index.x;
 						vword.y = index.y-i;
@@ -293,7 +291,7 @@ public class Crossword {
 							nextvwords.addAll(vwords.subList(vindex+1, vwords.size()));
 						}
 						ArrayList<Position>nexthcoords = new ArrayList<Position>();
-						placedIndices = placeWord(i, index.x, index.y, vword, board); //place chars on board
+						placedIndices = addWordV(i, index.x, index.y, vword, board); //place chars on board
 						//update hcoords with new vword placement
 						nexthcoords.addAll(hcoords);
 						nexthcoords.addAll(placedIndices);    
@@ -302,11 +300,11 @@ public class Crossword {
 							if(kill == true) return true;
 							removeWord(placedIndices, board);						//remove chars from board
 						}
-						else if(isLegal(0, index.x, index.y-i,vword.hword, board)){//place corresponding hword
+						else if(allowedPlacementH(0, index.x, index.y-i,vword.hword, board)){//place corresponding hword
 							HorizontalW hword = vword.hword;
 							ArrayList<Position>nextvcoords = new ArrayList<Position>();
 							//place hword pair at(x-i,y) starting w/ first index of hor word
-							placedIndices2 = placeWord(0, index.x, index.y-i, hword, board); //place chars on board
+							placedIndices2 = addWordH(0, index.x, index.y-i, hword, board); //place chars on board
 							//update hcoords with new vword placement
 							nextvcoords.addAll(vcoords);
 							nextvcoords.addAll(placedIndices2);
