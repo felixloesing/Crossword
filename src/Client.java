@@ -15,7 +15,27 @@ public class Client extends Thread {
 	public Client(String hostname, int port) {
 		try {
 			System.out.println("Trying to connect to " + hostname + ":" + port);
-			s = new Socket(hostname, port);
+			try {
+				s = new Socket(hostname, port);
+			} catch (Exception uhe) {
+				// TODO Auto-generated catch block
+				//uhe.printStackTrace();
+				while(s == null) {
+					System.out.println("Connection failed.");
+					System.out.print("Enter the server hostname: ");
+					hostname = Scan.scan.nextLine();
+					System.out.print("Enter the server port: ");
+					port = Integer.valueOf(Scan.scan.nextLine());
+					try {
+						s = new Socket(hostname, port);
+					} catch (Exception e) {
+						// TODO Auto-generated catch block
+						//e.printStackTrace();
+					}
+				}
+			}
+			
+			
 			System.out.println("Connected to " + hostname + ":" + port);
 			
 			ois = new ObjectInputStream(s.getInputStream());
@@ -51,9 +71,9 @@ public class Client extends Thread {
 			
 			
 		} catch (IOException ioe) {
-			//ioe.printStackTrace();
+			ioe.printStackTrace();
 		} catch (Exception e) {
-			
+			e.printStackTrace();
 		} finally {
 			try {
 				if (s != null) {
