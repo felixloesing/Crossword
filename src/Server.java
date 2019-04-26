@@ -5,6 +5,9 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.nio.file.FileSystemNotFoundException;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.EmptyStackException;
@@ -19,9 +22,17 @@ public class Server {
 	private Vector<Player> players;
 	public static Vector<Question> acrossQuestions;
 	public static Vector<Question> downQuestions;
+	
+	private static int downL = 0;
+	private static int acrossL = 0;
 
 	public Server(int port) {
 	ServerSocket ss = null;
+	
+	ArrayList<HorizontalW>hwords = new ArrayList<HorizontalW>();
+	ArrayList<VerticalW>vwords = new ArrayList<VerticalW>();
+	char[][] board = null;
+	
 	
 	while(true) {
 		try {
@@ -37,10 +48,19 @@ public class Server {
 			System.out.println("Connection from " + s.getInetAddress());
 			Player p = new Player(s, this, 1);
 			players.add(p);
+			Crossword c = new Crossword();
 			
 			try {
-				readfile();
+				File f = readfile();
+				
+				board = c.startGame(hwords, vwords, board, f);
+				//c.printBoard(board);
+				
+			} catch (FileSystemNotFoundException fsnfe) {
+				System.out.println("No valid File found. New Try on reconnect");
+				sendToEveryone("No valid File found. New Try on reconnect");
 			} catch (Exception e) {
+				e.printStackTrace();
 				sendToEveryone("No file found");
 				System.out.println("No file found");
 				return;
@@ -50,14 +70,24 @@ public class Server {
 			p.sendMessage(new Message("How many players will there be? ", true));
 			int num = Integer.valueOf(p.receiveMessage());
 			System.out.println("Number of players: " + num);
+			System.out.println("Reading random game file.");
+			System.out.println("File read successfully.");
 			
 			lock.lock();
 			for (int i = 1; i < num; i++) {
 				int n = i+1;
-				System.out.println("Waiting for player " + n + ". ");
+				//System.out.println("Waiting for player " + n + ". ");
+				sendToEveryone("Waiting for player " + n + ". ");
 				s = ss.accept();
 				System.out.println("Connection from " + s.getInetAddress());
+				sendToEveryone("Player " + String.valueOf(i+1) + " has joined from " + s.getInetAddress());
 				Player pl = new Player(s, this, n);
+				pl.sendMessage(new Message("There is a game waiting for you.", false));
+				int numOfPl = 1;
+				for (@SuppressWarnings("unused") Player playername : players) {
+					pl.sendMessage(new Message("Player " + String.valueOf(numOfPl) + " has already joined", false));
+					numOfPl++;
+				}
 				players.add(pl);
 			}
 			lock.unlock();
@@ -75,7 +105,13 @@ public class Server {
 				Player currP = players.get(cPlayer-1);
 				System.out.println("Sending game board. ");
 				//send out game board
+				for (Player pla : players) {
+					c.sendBoard(pla, board);
+				}
 				sendGameboard();
+				//sendBoard(currP, board);
+				//board = c.cleanBoard(hwords, vwords);
+				//c.sendBoard(currP, board);
 				System.out.println("Player " + cPlayer + "'s turn. ");
 				sendToAllExcept(players.get(cPlayer-1), "Player " + cPlayer + "'s turn. ");
 				currP.sendMessage(new Message("Would you like to answer a question across (a) or down (d)? ", true));
@@ -212,6 +248,27 @@ public class Server {
 								currP.sendMessage(new Message("That is correct! ", false));
 								currP.score = currP.score+1;
 								question.answered = true;
+								//System.out.println("Looking for answer");
+								HorizontalW ansW = null;
+								for (HorizontalW hw : hwords) {
+									//System.out.println(question.answer.toLowerCase());
+									if (question.answer.toLowerCase().equals(hw.word.toLowerCase())) {
+										//System.out.println("Found answer");
+										
+										ansW = hw;
+										//System.out.println(ansW.word);
+										c.placeAnswerHorizontal(ansW, board);
+										hwords.remove(ansW);
+										break;
+									}
+								}
+								//System.out.println("Did not find answer");
+								//c.placeAnswerHorizontal(ansW, board);
+								//hwords.remove(ansW);
+								//System.out.println("Sending game board.");
+								//for (Player pla : players) {
+									//c.sendBoard(pla, board);
+								//}
 							} else {
 								//wrong answer
 								//next player
@@ -233,6 +290,21 @@ public class Server {
 								currP.sendMessage(new Message("That is correct! ", false));
 								currP.score = currP.score+1;
 								question.answered = true;
+								VerticalW ansW = null;
+								for (VerticalW vw : vwords) {
+									if (question.answer.toLowerCase().equals(vw.word.toLowerCase())) {
+										ansW = vw;
+										c.placeAnswerVertical(ansW, board);
+										vwords.remove(ansW);
+										break;
+									}
+								}
+								//c.placeAnswerVertical(ansW, board);
+								//vwords.remove(ansW);
+								//System.out.println("Sending game board.");
+								//for (Player pla : players) {
+									//c.sendBoard(pla, board);
+								//}
 							} else {
 								//wrong answer
 								//next player
@@ -247,6 +319,10 @@ public class Server {
 				
 						
 				if(allQsAnswered() == true) {
+					for (Player pla : players) {
+						c.sendBoard(pla, board);
+					}
+					sendGameboard();
 					players.sort(new Comparator<Player>() {
 						@Override
 				        public int compare(Player o1, Player o2) {
@@ -255,7 +331,8 @@ public class Server {
 					});
 					Collections.reverse(players);
 					
-					System.out.println("The game has concluded. Sending scores. ");
+					System.out.println("The game has concluded.");
+					System.out.println("Sending scores.");
 					sendToEveryone("Final Score");
 					for (Player player : players) {
 						sendToEveryone("Player " + player.playerNumber + " - " + player.score + " correct answers. ");
@@ -277,7 +354,7 @@ public class Server {
 						question.answered = false;
 					}
 					
-					
+					break;
 				}
 				
 			}
@@ -305,7 +382,6 @@ public class Server {
 	public static void main(String[] args) {
 		acrossQuestions = new Vector<Question>();
 		downQuestions = new Vector<Question>();
-		//readfile();
 		@SuppressWarnings("unused")
 		Server server = new Server(3456);
 	}
@@ -372,7 +448,7 @@ public class Server {
 		}
 	}
 	
-	public static void readfile() {
+	public static File readfile() {
 		File file = null;
 		/*
 		try {
@@ -386,78 +462,145 @@ public class Server {
 		File dir = new File("./gamedata");
 		File[] files = dir.listFiles();
 		
-		if (files.length < 1) {
+		ArrayList<File> fList = new ArrayList<File>();
+		fList.addAll(Arrays.asList(files));
+		
+		if (fList.size() < 1) {
 			throw new EmptyStackException();
 		}
 
 		Random rand = new Random();
-
-		file = files[rand.nextInt(files.length)];
 		
-		BufferedReader br = null;
-		
-		try {
-			FileReader fr = new FileReader(file);
-			br = new BufferedReader(fr);
-			String line = br.readLine();
-			if (line == null) {
-				throw new FileNotFoundException();
+		while (true) {
+			
+			file = fList.get(rand.nextInt(files.length));
+			if (fList.size() < 1) {
+				throw new FileSystemNotFoundException();
 			}
-			while (line != null) {
-				
-				
-				if (line != null && line.toLowerCase().equals("across")) {
-					//br.readLine();
-					while (line != null && !line.toLowerCase().equals("down")) {
-						//System.out.println(line);
-						if (!line.toLowerCase().equals("across") && !line.toLowerCase().equals("down")) {
-							String[] splitLine = line.split(Pattern.quote("|"));
-							if (splitLine.length != 3) {
-								System.out.println("The file is not formatted properly.");
-								System.out.println("There are not enough parameters on line ‘" + line + "’.");
-								throw new IOException();
+			fList.remove(file);
+			
+			//removed choice from list of possible files.
+			//if not formatted properly -> choose next until list empty
+			
+			BufferedReader br = null;
+			int acrossCount = 0;
+			int downCount = 0;
+			
+			try {
+				FileReader fr = new FileReader(file);
+				br = new BufferedReader(fr);
+				String line = br.readLine();
+				if (line == null) {
+					throw new FileNotFoundException();
+				}
+				while (line != null) {
+					
+					
+					if (line != null && line.toLowerCase().equals("across")) {
+						acrossCount++;
+						//br.readLine();
+						while (line != null && !line.toLowerCase().equals("down")) {
+							//System.out.println(line);
+							if (!line.toLowerCase().equals("across") && !line.toLowerCase().equals("down")) {
+								String[] splitLine = line.split(Pattern.quote("|"));
+								if (splitLine.length != 3) {
+									System.out.println("The file is not formatted properly.");
+									System.out.println("There are not enough parameters on line ‘" + line + "’.");
+									throw new IOException();
+									//continue;
+								}
+								
+								if (splitLine[1].contains(" ")) {
+									throw new IOException();
+								}
+								
+								Question qAcross = new Question(Integer.valueOf(splitLine[0]), splitLine[2], splitLine[1]);
+								acrossQuestions.add(qAcross);
+								//System.out.println("qacross: " + qAcross.question);
 							}
-							Question qAcross = new Question(Integer.valueOf(splitLine[0]), splitLine[2], splitLine[1]);
-							acrossQuestions.add(qAcross);
-							//System.out.println("qacross: " + qAcross.question);
+							line = br.readLine();
 						}
-						line = br.readLine();
+						
+					}
+					
+					if (line != null && line.toLowerCase().equals("down")) {
+						downCount++;
+						//br.readLine();
+						while (line != null && !line.toLowerCase().equals("across")) {
+							//System.out.println(line);
+							if (!line.toLowerCase().equals("across") && !line.toLowerCase().equals("down")) {
+								String[] splitLine = line.split(Pattern.quote("|"));
+								if (splitLine.length != 3) {
+									//System.out.println("The file is not formatted properly.");
+									//System.out.println("There are not enough parameters on line ‘" + line + "’.");
+									throw new IOException();
+									//continue;
+								}
+								
+								if (splitLine[1].contains(" ")) {
+									throw new IOException();
+								}
+								
+								Question qDown = new Question(Integer.valueOf(splitLine[0]), splitLine[2], splitLine[1]);
+								downQuestions.add(qDown);
+								//System.out.println("qdown: " + qDown.question);
+							}
+							line = br.readLine();
+						}
 					}
 					
 				}
 				
-				if (line != null && line.toLowerCase().equals("down")) {
-					//br.readLine();
-					while (line != null && !line.toLowerCase().equals("across")) {
-						//System.out.println(line);
-						if (!line.toLowerCase().equals("across") && !line.toLowerCase().equals("down")) {
-							String[] splitLine = line.split(Pattern.quote("|"));
-							if (splitLine.length != 3) {
-								System.out.println("The file is not formatted properly.");
-								System.out.println("There are not enough parameters on line ‘" + line + "’.");
+				if (downCount != 1 && acrossCount != 1) {
+					continue;
+				}
+				
+				
+				for (Question aQ : acrossQuestions) {
+					for (Question dQ : downQuestions) {
+						if (aQ.number == dQ.number) {
+							if (aQ.answer.charAt(0) != dQ.answer.charAt(0)) {
 								throw new IOException();
 							}
-							Question qDown = new Question(Integer.valueOf(splitLine[0]), splitLine[2], splitLine[1]);
-							downQuestions.add(qDown);
-							//System.out.println("qdown: " + qDown.question);
 						}
-						line = br.readLine();
 					}
 				}
 				
-			}
-		} catch (IOException e) {
-			e.printStackTrace();
-			System.out.println(e.getMessage());
-		} finally {
-			try {
-				br.close();
+				return file;
+				
 			} catch (IOException e) {
-				e.printStackTrace();
+				//e.printStackTrace();
+				//System.out.println(e.getMessage());
+				continue;
+			} finally {
+				try {
+					br.close();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
 			}
 		}
 		
+	}
+	
+	public static void getBoardSize() {
+		
+		downL = 0;
+		acrossL = 0;
+		
+		for (Question question : acrossQuestions) {
+			acrossL += question.answer.length();
+		}
+		
+		for (Question question : downQuestions) {
+			downL += question.answer.length();
+		}
+		
+		downL = downL*2;
+		acrossL = acrossL*2;
 		
 	}
+	
+	
 
 }
