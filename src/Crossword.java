@@ -166,7 +166,7 @@ public class Crossword {
 
 		hori.remove(0);
 		
-		solve(hori, coordH, verti, coordV, board);
+		findSolution(board, hori, coordH, verti, coordV);
 		vertWPlaced.addAll(verti);
 		horiWPlaced.addAll(hori);
 		
@@ -220,16 +220,63 @@ public class Crossword {
 		}
 	}
 
-	public boolean solve(ArrayList<HorizontalW>hwords, ArrayList<Position>hcoords, ArrayList<VerticalW>vwords, ArrayList<Position>vcoords, char[][] board){
-		if (hwords.size() == 0 && vwords.size() == 0){
-			//printBoard(board);
-			return true; //SOLUTION
+	public boolean findSolution(char[][] board, ArrayList<HorizontalW>horiW, ArrayList<Position>coordsH, ArrayList<VerticalW>vertW, ArrayList<Position>coordsV){
+		boolean stop = false;
+		
+		if (vertW.size() == 0 && horiW.size() == 0){
+			return true;
 		}
-		//try all potential indexes 
-		//PLACE HWORD
-		boolean kill = false;
-		for(Position index : hcoords){
-			for(HorizontalW hword: hwords){
+		
+		for(Position index : coordsV) {
+			for(VerticalW vword: vertW){
+				for(int i=0; i<vword.len; i++){
+					ArrayList<Position>placedIndices = new ArrayList<Position>();
+					ArrayList<Position> placedIndices2 = new ArrayList<Position>();
+					if(allowedPlacementV(i, index.x, index.y, vword, board)){
+						//vword.setXY(index.x, index.y-i);
+						vword.x = index.x;
+						vword.y = index.y-i;
+						//get slice of hwords, all but current
+						int vindex = vertW.indexOf(vword);
+						ArrayList<VerticalW> nextvwords = new ArrayList<VerticalW>(vertW.subList(0, vindex));
+						if(vindex+1<vertW.size()){
+							nextvwords.addAll(vertW.subList(vindex+1, vertW.size()));
+						}
+						ArrayList<Position>nexthcoords = new ArrayList<Position>();
+						placedIndices = addWordV(i, index.x, index.y, vword, board); //place chars on board
+						//update hcoords with new vword placement
+						nexthcoords.addAll(coordsH);
+						nexthcoords.addAll(placedIndices);    
+						if(!vword.isPair){
+							stop = findSolution(board, horiW, nexthcoords, nextvwords, coordsV);		//next step of recursion
+							if(stop == true) return true;
+							unplaceWord(board, placedIndices);						//remove chars from board
+						}
+						else if(allowedPlacementH(0, index.x, index.y-i,vword.hword, board)){//place corresponding hword
+							HorizontalW hword = vword.hword;
+							ArrayList<Position>nextvcoords = new ArrayList<Position>();
+							//place hword pair at(x-i,y) starting w/ first index of hor word
+							placedIndices2 = addWordH(0, index.x, index.y-i, hword, board); //place chars on board
+							//update hcoords with new vword placement
+							nextvcoords.addAll(coordsV);
+							nextvcoords.addAll(placedIndices2);
+							int hindex = horiW.indexOf(hword);
+							ArrayList<HorizontalW> nexthwords = new ArrayList<HorizontalW>(horiW.subList(0, hindex));
+							if(hindex+1<horiW.size()){
+								nexthwords.addAll(horiW.subList(hindex+1, horiW.size()));
+							}
+							stop = findSolution(board, nexthwords, nexthcoords, nextvwords, nextvcoords);		//next step of recursion
+							if(stop == true) return true;
+							unplaceWord(board, placedIndices);						//remove chars from board
+							unplaceWord(board, placedIndices2);						//remove chars from board
+						}
+					}
+				}
+			}
+		}
+		
+		for(Position index : coordsH){
+			for(HorizontalW hword: horiW){
 				for(int i=0; i<hword.len; i++){
 					ArrayList<Position>placedIndices = new ArrayList<Position>();
 					ArrayList<Position> placedIndices2 = new ArrayList<Position>();
@@ -239,19 +286,19 @@ public class Crossword {
 						hword.x = index.x-i;
 						hword.y = index.y;
 						//get slice of hwords, all but current
-						int hindex = hwords.indexOf(hword);
-						ArrayList<HorizontalW> nexthwords = new ArrayList<HorizontalW>(hwords.subList(0, hindex));
-						if(hindex+1<hwords.size()){
-							nexthwords.addAll(hwords.subList(hindex+1, hwords.size()));
+						int hindex = horiW.indexOf(hword);
+						ArrayList<HorizontalW> nexthwords = new ArrayList<HorizontalW>(horiW.subList(0, hindex));
+						if(hindex+1<horiW.size()){
+							nexthwords.addAll(horiW.subList(hindex+1, horiW.size()));
 						}
 						//update vcoords
 						ArrayList<Position>nextvcoords = new ArrayList<Position>();
 						placedIndices = addWordH(i, index.x, index.y, hword, board); //place chars on board
-						nextvcoords.addAll(vcoords);
+						nextvcoords.addAll(coordsV);
 						nextvcoords.addAll(placedIndices);
 						if(!hword.isPair){ //if word does not have pair
-							kill = solve(nexthwords, hcoords, vwords, nextvcoords, board);		//next step of recursion
-							if(kill == true) return true;
+							stop = findSolution(board, nexthwords, coordsH, vertW, nextvcoords);		//next step of recursion
+							if(stop == true) return true;
 							unplaceWord(board, placedIndices);						//remove chars from board
 						}		
 						else if(allowedPlacementV(0, index.x-i, index.y,hword.vertWord, board)){//PLACE CORRESPONDING VWORD as well
@@ -260,15 +307,15 @@ public class Crossword {
 							//place vword pair at(x-i,y) starting w/ first index of vert word
 							placedIndices2 = addWordV(0, index.x-i, index.y, vword, board); //place chars on board
 							//update hcoords with new vword placement
-							nexthcoords.addAll(hcoords);
+							nexthcoords.addAll(coordsH);
 							nexthcoords.addAll(placedIndices2);
-							int vindex = vwords.indexOf(vword);
-							ArrayList<VerticalW> nextvwords = new ArrayList<VerticalW>(vwords.subList(0, vindex));
-							if(vindex+1<vwords.size()){
-								nextvwords.addAll(vwords.subList(vindex+1, vwords.size()));
+							int vindex = vertW.indexOf(vword);
+							ArrayList<VerticalW> nextvwords = new ArrayList<VerticalW>(vertW.subList(0, vindex));
+							if(vindex+1<vertW.size()){
+								nextvwords.addAll(vertW.subList(vindex+1, vertW.size()));
 							}
-							kill = solve(nexthwords, nexthcoords, nextvwords, nextvcoords,board);
-							if(kill == true) return true;
+							stop = findSolution(board, nexthwords, nexthcoords, nextvwords, nextvcoords);
+							if(stop == true) return true;
 							unplaceWord(board, placedIndices);						//remove chars from board
 							unplaceWord(board, placedIndices2);						//remove chars from board
 						}
@@ -277,53 +324,6 @@ public class Crossword {
 			}
 		}
 		//PLACE VWORD
-		for(Position index : vcoords){
-			for(VerticalW vword: vwords){
-				for(int i=0; i<vword.len; i++){
-					ArrayList<Position>placedIndices = new ArrayList<Position>();
-					ArrayList<Position> placedIndices2 = new ArrayList<Position>();
-					if(allowedPlacementV(i, index.x, index.y, vword, board)){
-						//vword.setXY(index.x, index.y-i);
-						vword.x = index.x;
-						vword.y = index.y-i;
-						//get slice of hwords, all but current
-						int vindex = vwords.indexOf(vword);
-						ArrayList<VerticalW> nextvwords = new ArrayList<VerticalW>(vwords.subList(0, vindex));
-						if(vindex+1<vwords.size()){
-							nextvwords.addAll(vwords.subList(vindex+1, vwords.size()));
-						}
-						ArrayList<Position>nexthcoords = new ArrayList<Position>();
-						placedIndices = addWordV(i, index.x, index.y, vword, board); //place chars on board
-						//update hcoords with new vword placement
-						nexthcoords.addAll(hcoords);
-						nexthcoords.addAll(placedIndices);    
-						if(!vword.isPair){
-							kill = solve(hwords, nexthcoords, nextvwords, vcoords, board);		//next step of recursion
-							if(kill == true) return true;
-							unplaceWord(board, placedIndices);						//remove chars from board
-						}
-						else if(allowedPlacementH(0, index.x, index.y-i,vword.hword, board)){//place corresponding hword
-							HorizontalW hword = vword.hword;
-							ArrayList<Position>nextvcoords = new ArrayList<Position>();
-							//place hword pair at(x-i,y) starting w/ first index of hor word
-							placedIndices2 = addWordH(0, index.x, index.y-i, hword, board); //place chars on board
-							//update hcoords with new vword placement
-							nextvcoords.addAll(vcoords);
-							nextvcoords.addAll(placedIndices2);
-							int hindex = hwords.indexOf(hword);
-							ArrayList<HorizontalW> nexthwords = new ArrayList<HorizontalW>(hwords.subList(0, hindex));
-							if(hindex+1<hwords.size()){
-								nexthwords.addAll(hwords.subList(hindex+1, hwords.size()));
-							}
-							kill = solve(nexthwords, nexthcoords, nextvwords, nextvcoords, board);		//next step of recursion
-							if(kill == true) return true;
-							unplaceWord(board, placedIndices);						//remove chars from board
-							unplaceWord(board, placedIndices2);						//remove chars from board
-						}
-					}
-				}
-			}
-		}
 		return false;
 	}
 
