@@ -220,110 +220,136 @@ public class Crossword {
 		}
 	}
 
-	public boolean findSolution(char[][] board, ArrayList<HorizontalW>horiW, ArrayList<Position>coordsH, ArrayList<VerticalW>vertW, ArrayList<Position>coordsV){
-		boolean stop = false;
+	public boolean findSolution(char[][] board, ArrayList<HorizontalW>horiW, ArrayList<Position>sHCoord, ArrayList<VerticalW>vertW, ArrayList<Position>coordsV){
 		
 		if (vertW.size() == 0 && horiW.size() == 0){
 			return true;
 		}
 		
-		for(Position index : coordsV) {
-			for(VerticalW vword: vertW){
-				for(int i=0; i<vword.len; i++){
-					ArrayList<Position>placedIndices = new ArrayList<Position>();
-					ArrayList<Position> placedIndices2 = new ArrayList<Position>();
+		for (Position index : coordsV) {
+			for (VerticalW vword: vertW){
+				for (int i=0; i<vword.len; i++) {
+					ArrayList<Position>indAPlaced = new ArrayList<Position>();
+					ArrayList<Position> indBplaced = new ArrayList<Position>();
+					
 					if(allowedPlacementV(i, index.x, index.y, vword, board)){
-						//vword.setXY(index.x, index.y-i);
-						vword.x = index.x;
+						
 						vword.y = index.y-i;
-						//get slice of hwords, all but current
-						int vindex = vertW.indexOf(vword);
-						ArrayList<VerticalW> nextvwords = new ArrayList<VerticalW>(vertW.subList(0, vindex));
-						if(vindex+1<vertW.size()){
-							nextvwords.addAll(vertW.subList(vindex+1, vertW.size()));
+						vword.x = index.x;
+						
+						
+						int indV = vertW.indexOf(vword);
+						
+						ArrayList<VerticalW> wordsNv = new ArrayList<VerticalW>(vertW.subList(0, indV));
+						if (indV+1 < vertW.size()){
+							wordsNv.addAll(vertW.subList(indV+1, vertW.size()));
 						}
+						
+						indAPlaced = addWordV(i, index.x, index.y, vword, board);
 						ArrayList<Position>nexthcoords = new ArrayList<Position>();
-						placedIndices = addWordV(i, index.x, index.y, vword, board); //place chars on board
-						//update hcoords with new vword placement
-						nexthcoords.addAll(coordsH);
-						nexthcoords.addAll(placedIndices);    
-						if(!vword.isPair){
-							stop = findSolution(board, horiW, nexthcoords, nextvwords, coordsV);		//next step of recursion
-							if(stop == true) return true;
-							unplaceWord(board, placedIndices);						//remove chars from board
-						}
-						else if(allowedPlacementH(0, index.x, index.y-i,vword.hword, board)){//place corresponding hword
-							HorizontalW hword = vword.hword;
-							ArrayList<Position>nextvcoords = new ArrayList<Position>();
-							//place hword pair at(x-i,y) starting w/ first index of hor word
-							placedIndices2 = addWordH(0, index.x, index.y-i, hword, board); //place chars on board
-							//update hcoords with new vword placement
-							nextvcoords.addAll(coordsV);
-							nextvcoords.addAll(placedIndices2);
-							int hindex = horiW.indexOf(hword);
-							ArrayList<HorizontalW> nexthwords = new ArrayList<HorizontalW>(horiW.subList(0, hindex));
-							if(hindex+1<horiW.size()){
-								nexthwords.addAll(horiW.subList(hindex+1, horiW.size()));
+						
+						nexthcoords.addAll(indAPlaced); 
+						nexthcoords.addAll(sHCoord);
+						
+						
+						if (!vword.isPair) {
+							
+							if(findSolution(board, horiW, nexthcoords, wordsNv, coordsV) == true) {
+								return true;
 							}
-							stop = findSolution(board, nexthwords, nexthcoords, nextvwords, nextvcoords);		//next step of recursion
-							if(stop == true) return true;
-							unplaceWord(board, placedIndices);						//remove chars from board
-							unplaceWord(board, placedIndices2);						//remove chars from board
+							
+							unplaceWord(board, indAPlaced);
+							break;
+						}
+						
+						if (allowedPlacementH(0, index.x, index.y-i,vword.hword, board)) {
+							
+							ArrayList<Position>vCoordN = new ArrayList<Position>();
+							HorizontalW hword = vword.hword;
+							indBplaced = addWordH(0, index.x, index.y-i, hword, board);
+							
+							vCoordN.addAll(coordsV);
+							vCoordN.addAll(indBplaced);
+							
+							int hindex = horiW.indexOf(hword);
+							ArrayList<HorizontalW> wNHori = new ArrayList<HorizontalW>(horiW.subList(0, hindex));
+							
+							if(hindex+1<horiW.size()){
+								wNHori.addAll(horiW.subList(hindex+1, horiW.size()));
+							}
+
+							if (findSolution(board, wNHori, nexthcoords, wordsNv, vCoordN) == true) {
+								return true;
+							}
+							
+							unplaceWord(board, indBplaced);
+							unplaceWord(board, indAPlaced);
 						}
 					}
 				}
 			}
 		}
 		
-		for(Position index : coordsH){
+		for(Position index : sHCoord){
 			for(HorizontalW hword: horiW){
 				for(int i=0; i<hword.len; i++){
-					ArrayList<Position>placedIndices = new ArrayList<Position>();
-					ArrayList<Position> placedIndices2 = new ArrayList<Position>();
-					if(allowedPlacementH(i, index.x, index.y, hword, board)){
-						//hword.setXY(index.x-i,index.y);
-
-						hword.x = index.x-i;
+					
+					ArrayList<Position>indAPlaced = new ArrayList<Position>();
+					ArrayList<Position> indBPlaced = new ArrayList<Position>();
+					
+					if (allowedPlacementH(i, index.x, index.y, hword, board) ){
+						
 						hword.y = index.y;
-						//get slice of hwords, all but current
-						int hindex = horiW.indexOf(hword);
-						ArrayList<HorizontalW> nexthwords = new ArrayList<HorizontalW>(horiW.subList(0, hindex));
-						if(hindex+1<horiW.size()){
-							nexthwords.addAll(horiW.subList(hindex+1, horiW.size()));
+						hword.x = index.x-i;
+						
+						ArrayList<HorizontalW> horiWN = new ArrayList<HorizontalW>(horiW.subList(0, horiW.indexOf(hword)));
+						ArrayList<Position>coordNV = new ArrayList<Position>();
+						
+						if(horiW.indexOf(hword)+1<horiW.size()){
+							horiWN.addAll(horiW.subList(horiW.indexOf(hword)+1, horiW.size()));
 						}
-						//update vcoords
-						ArrayList<Position>nextvcoords = new ArrayList<Position>();
-						placedIndices = addWordH(i, index.x, index.y, hword, board); //place chars on board
-						nextvcoords.addAll(coordsV);
-						nextvcoords.addAll(placedIndices);
-						if(!hword.isPair){ //if word does not have pair
-							stop = findSolution(board, nexthwords, coordsH, vertW, nextvcoords);		//next step of recursion
-							if(stop == true) return true;
-							unplaceWord(board, placedIndices);						//remove chars from board
-						}		
-						else if(allowedPlacementV(0, index.x-i, index.y,hword.vertWord, board)){//PLACE CORRESPONDING VWORD as well
-							VerticalW vword = hword.vertWord;
-							ArrayList<Position>nexthcoords = new ArrayList<Position>();
-							//place vword pair at(x-i,y) starting w/ first index of vert word
-							placedIndices2 = addWordV(0, index.x-i, index.y, vword, board); //place chars on board
-							//update hcoords with new vword placement
-							nexthcoords.addAll(coordsH);
-							nexthcoords.addAll(placedIndices2);
-							int vindex = vertW.indexOf(vword);
-							ArrayList<VerticalW> nextvwords = new ArrayList<VerticalW>(vertW.subList(0, vindex));
-							if(vindex+1<vertW.size()){
-								nextvwords.addAll(vertW.subList(vindex+1, vertW.size()));
+						
+						
+						indAPlaced = addWordH(i, index.x, index.y, hword, board);
+						
+						coordNV.addAll(indAPlaced);
+						coordNV.addAll(coordsV);
+						
+						
+						if(!hword.isPair){
+							
+							if(findSolution(board, horiWN, sHCoord, vertW, coordNV) == true) {
+								return true;
 							}
-							stop = findSolution(board, nexthwords, nexthcoords, nextvwords, nextvcoords);
-							if(stop == true) return true;
-							unplaceWord(board, placedIndices);						//remove chars from board
-							unplaceWord(board, placedIndices2);						//remove chars from board
+							unplaceWord(board, indAPlaced);
+						}		
+						else if(allowedPlacementV(0, index.x-i, index.y,hword.vertWord, board)) {
+							
+							ArrayList<Position>coordN = new ArrayList<Position>();
+							
+							indBPlaced = addWordV(0, index.x-i, index.y, hword.vertWord, board);
+							
+							coordN.addAll(indBPlaced);
+							coordN.addAll(sHCoord);
+							
+							int indV = vertW.indexOf(hword.vertWord);
+							
+							ArrayList<VerticalW> nextvwords = new ArrayList<VerticalW>(vertW.subList(0, indV));
+							if(indV+1<vertW.size()){
+								nextvwords.addAll(vertW.subList(indV+1, vertW.size()));
+							}
+							
+							if(findSolution(board, horiWN, coordN, nextvwords, coordNV) == true) {
+								return true;
+							}
+							unplaceWord(board, indBPlaced);
+							unplaceWord(board, indAPlaced);
+							
 						}
 					}
 				}
 			}
 		}
-		//PLACE VWORD
 		return false;
 	}
 

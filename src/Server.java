@@ -54,21 +54,26 @@ public class Server {
 				File f = readfile();
 				
 				board = c.startGame(hwords, vwords, board, f);
-				//c.printBoard(board);
 				
 			} catch (FileSystemNotFoundException fsnfe) {
 				System.out.println("No valid File found. New Try on reconnect");
 				sendToEveryone("No valid File found. New Try on reconnect");
+				continue;
 			} catch (Exception e) {
-				e.printStackTrace();
+				//e.printStackTrace();
 				sendToEveryone("No file found");
 				System.out.println("No file found");
-				return;
+				continue;
 			}
 			
-			//ask for player count
-			p.sendMessage(new Message("How many players will there be? ", true));
-			int num = Integer.valueOf(p.receiveMessage());
+			int num = -1;
+			while (num < 1 || num > 3) {
+				//ask for player count
+				p.sendMessage(new Message("How many players will there be? ", true));
+				num = Integer.valueOf(p.receiveMessage());
+			}
+			
+			
 			System.out.println("Number of players: " + num);
 			System.out.println("Reading random game file.");
 			System.out.println("File read successfully.");
